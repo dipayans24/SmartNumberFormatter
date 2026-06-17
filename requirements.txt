@@ -3,3 +3,4 @@ streamlit
 numpy
 phonenumbers
 openpyxl
+xlsxwriter
