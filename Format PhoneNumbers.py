@@ -32,7 +32,15 @@ def getNumber(number):
 
     except:
         return pd.NA
+
+def getNewName(NewColName, df):
+    newcol = 1
+    while NewColName in df.columns:  #Checks whether the newly generated column name already exists or not
+        NewColName = NewColName+"_"+str(newcol)
+        newcol = newcol+1
     
+    return NewColName
+      
 def save_upload(uploaded_file):
     tmp_dir = tempfile.mkdtemp()
     tmp_path = os.path.join(tmp_dir, uploaded_file.name)
@@ -49,18 +57,22 @@ def get_country_code(df, select_columns, fileextn, select_sheets = 0, LSQFormat 
             df= pd.read_csv(filePath,sep=",", encoding_errors="ignore", low_memory=False)
 
     ColLocation = df.columns.get_loc(select_columns)
-
     df["Test"] = df[select_columns].map(lambda x:  getNumber(x) )
-    df.insert(loc=ColLocation, column="Country_Code", value=df["Test"].map(lambda x: country_code(str(x))), allow_duplicates=True )
-    df.insert(loc=ColLocation+1, column="Phone_Number", value=df["Test"].map(lambda x: national_number(str(x))), allow_duplicates=True )
     
-    totalLength =  df["Phone_Number"].notna().sum() 
+    country_code_column = getNewName("Country_Code", df)
+    phone_number_column = getNewName("Phone_Number", df)
+
+    df.insert(loc=ColLocation, column=country_code_column, value=df["Test"].map(lambda x: country_code(str(x))), allow_duplicates=True )
+    df.insert(loc=ColLocation+1, column=phone_number_column, value=df["Test"].map(lambda x: national_number(str(x))), allow_duplicates=True )
+    
+    totalLength =  df[phone_number_column].notna().sum() 
 
     if totalLength>0:
         if LSQFormat:  
-            df.insert(loc=ColLocation+2, column="Phone_LSQ",  
-                    value=np.where(df["Phone_Number"].notna(), 
-                                                "+" + df["Country_Code"].astype(str) + "-" + df["Phone_Number"].astype(str),
+            LSQ_Phone = getNewName("Phone_LSQ", df)
+            df.insert(loc=ColLocation+2, column=LSQ_Phone,  
+                    value=np.where(df[phone_number_column].notna(), 
+                                                "+" + df[country_code_column].astype(str) + "-" + df[phone_number_column].astype(str),
                                                 pd.NA), allow_duplicates=True )
             
         df.drop(columns=["Test"], inplace=True)
@@ -78,7 +90,7 @@ def get_country_code(df, select_columns, fileextn, select_sheets = 0, LSQFormat 
         return tmp.name
     
     else:
-        df.drop(columns=["Country_Code", "Phone_Number"], inplace=True)
+        df.drop(columns=[country_code_column, phone_number_column], inplace=True)
     
         raiseError("Incorrect column selected. Please select the phone number column.")
 
