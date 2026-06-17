@@ -60,46 +60,50 @@ def get_country_code(df, select_columns, fileextn, select_sheets = 0, LSQFormat 
         if LSQFormat:  
             df.insert(loc=ColLocation+2, column="Phone_LSQ",  
                     value=np.where(df["Phone_Number"].notna(), 
-                                                "'+" + df["Country_Code"].astype(str) + "-" + df["Phone_Number"].astype(str),
+                                                "+" + df["Country_Code"].astype(str) + "-" + df["Phone_Number"].astype(str),
                                                 pd.NA), allow_duplicates=True )
             
         df.drop(columns=["Test"], inplace=True)
 
         df.rename(columns={i: " " for i in df.columns if i.find("Unnamed") != -1}, errors="ignore", inplace=True)
-
-        tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".xlsx")
+        #df.drop(columns=[i for i in df.columns if i.find("Unnamed") != -1], inplace=True, errors="ignore")
+        tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".xlsx" if (fileextn in ["xlsx", "manual"]) else ".csv")
         tmp.close()
-        if (fileextn in ["xlsx", "manual"]) or (LSQFormat):
-            with pd.ExcelWriter(tmp.name, engine="openpyxl", mode="w") as file:
+        if (fileextn in ["xlsx", "manual"]):
+            with pd.ExcelWriter(tmp.name, engine="xlsxwriter") as file:
                 df.to_excel(file, index=False)
         else:
             df.to_csv(tmp.name,sep=",", index=False)
-
 
         return tmp.name
     
     else:
         df.drop(columns=["Country_Code", "Phone_Number"], inplace=True)
     
-    raiseError("Incorrect column selected. Please select the phone number column.")
+        raiseError("Incorrect column selected. Please select the phone number column.")
 
-    
+if "uploader_key" not in st.session_state:
+        st.session_state.uploader_key = 0  
+
+def clearUploads():
+    if "tempData" in st.session_state:
+        st.session_state["tempData"] = False
+        st.rerun()
+
 def reset_text():
     st.session_state.manualText = ""
 
 st.set_page_config(page_title=" Country Code Formatter", page_icon="🌎", layout="wide")
 st.header("🌎 Country Code Formatter")
 
-text = st.text_area("Enter Phone Number(s) manually.",   key="manualText")
-
+text = st.text_area("Enter Phone Number(s) manually.",   key="manualText", on_change=clearUploads)
 
 st.markdown("<h3 style='text-align: center;'>OR</h3>", unsafe_allow_html=True)
-fileLoc = st.file_uploader("Upload File", type=["csv", "xlsx"], on_change=reset_text)
+fileLoc = st.file_uploader("Upload File", type=["csv", "xlsx"], on_change=reset_text, key=f"uploader_{st.session_state.uploader_key}")
 
 getinLSQFormat = st.checkbox("LeadSquared Format.")
 
 if fileLoc:
-    #st.session_state["manualText"] = ""
     filePath = save_upload(fileLoc)
     fileName,  fileextn = os.path.basename(filePath).split(".") 
     select_sheets = 0
@@ -126,7 +130,11 @@ if fileLoc:
             tmp_path = get_country_code(df, select_columns, fileextn, select_sheets, getinLSQFormat)
 
             if tmp_path:
-                if getinLSQFormat:
+                if (fileextn == "csv") and getinLSQFormat:
+                    new_tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".xlsx")
+                    new_tmp.close()
+                    new_df = pd.read_csv(tmp_path, sep=",", low_memory=False).to_excel(new_tmp.name, index=False)
+                    tmp_path = new_tmp.name
                     fileextn = "xlsx"
 
                 outputFileName = fileName+"."+fileextn
@@ -137,23 +145,21 @@ if fileLoc:
                 os.unlink(tmp_path) 
             #st.download_button(label="Download File", data=df, file_name=filePath.name) 
 elif len(text) > 0:
+    
     df = pd.DataFrame(data={"Phone": text.split("\n")})
     df["Phone"] = df["Phone"].apply(lambda x: pd.NA if x== "" else x)
     df.dropna(how="all", inplace=True)
-    st.dataframe(df)
+    st.dataframe(df, key="tempData", hide_index=True)
     
     btn = st.button(label="Generate Data", type="primary")
     if btn:
         with st.spinner("Processing..",show_time=True):
                 
                 tmp_path = get_country_code(df, "Phone", "manual", None, getinLSQFormat)
-                #outputFileName = fileName+"."+fileextn
                 output_df = pd.read_excel(tmp_path)
 
-                st.dataframe(output_df.style.set_properties(**{'text-align': 'right'}) )  
-                    #st.download_button("Download Files", f,  file_name=outputFileName)
+                st.dataframe(output_df.style.set_properties(**{'text-align': 'right'}) , hide_index=True)  
 
-                #os.unlink(tmp_path) 
     
 
     
