@@ -81,11 +81,10 @@ def get_country_code(df, select_columns, fileextn, select_sheets = 0, LSQFormat 
 
         df.rename(columns={i: " " for i in df.columns if i.find("Unnamed") != -1}, errors="ignore", inplace=True)
         if fileextn != "manual":
-            tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".xlsx" if (fileextn in ["xlsx", "manual"]) else ".csv")
+            tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".xlsx" if (fileextn in ["xlsx", "manual"]) or LSQFormat else ".csv")
             tmp.close()
-            if (fileextn in ["xlsx", "manual"]):
-                with pd.ExcelWriter(tmp.name, engine="xlsxwriter") as file:
-                    df.to_excel(file, index=False)
+            if (fileextn in ["xlsx", "manual"]) or LSQFormat:
+                df.to_excel(tmp.name,engine="xlsxwriter", index=False)
             else:
                 df.to_csv(tmp.name,sep=",", index=False)
 
@@ -106,86 +105,90 @@ def clearUploads():
 def reset_text():
     st.session_state.manualText = ""
 
-if "uploader_key" not in st.session_state:
-        st.session_state.uploader_key = 0  
+if __name__ == "__main__":
 
-st.set_page_config(page_title=" Country Code Formatter", page_icon="🌎", layout="wide")
-st.header("🌎 Country Code Formatter")
+    if "uploader_key" not in st.session_state:
+            st.session_state.uploader_key = 0  
 
-text = st.text_area("Enter Phone Number(s) manually.",   key="manualText", on_change=clearUploads)
+    st.set_page_config(page_title=" Country Code Formatter", page_icon="🌎", layout="wide")
+    st.header("🌎 Country Code Formatter")
 
-st.markdown("<h3 style='text-align: center;'>OR</h3>", unsafe_allow_html=True)
-fileLoc = st.file_uploader("Upload File", type=["csv", "xlsx"], on_change=reset_text, key=f"uploader_{st.session_state.uploader_key}")
+    text = st.text_area("Enter Phone Number(s) manually.",   key="manualText", on_change=clearUploads)
 
-getinLSQFormat = st.checkbox("LeadSquared Format.")
+    st.markdown("<h3 style='text-align: center;'>OR</h3>", unsafe_allow_html=True)
+    fileLoc = st.file_uploader("Upload File", type=["csv", "xlsx"], on_change=reset_text, key=f"uploader_{st.session_state.uploader_key}")
 
-if fileLoc:
-    filePath = save_upload(fileLoc)
-    fileName,  fileextn = os.path.basename(filePath).split(".") 
-    select_sheets = 0
-    if fileextn == "xlsx":
-        with pd.ExcelFile(filePath, engine="openpyxl") as file:
-            sheets = file.sheet_names
-        if len(sheets) > 0:
-            select_sheets = st.selectbox(label = "Multiple Sheets detected. Select a sheet to process", options=sheets)
-            if select_sheets:
-                df = pd.read_excel(filePath,nrows=100 , sheet_name=select_sheets)
-        else:
-            df = pd.read_excel(filePath,nrows=100 , sheet_name=sheets[0],parse_dates=False)
-    else:
-        df= pd.read_csv(filePath,sep=",", nrows = 100, encoding_errors="replace", parse_dates=False)
+    getinLSQFormat = st.checkbox("LeadSquared Format.")
 
-    select_columns = st.selectbox(label = "Select a column to process", options=df.columns, index=None)
-    
-    btn = st.button(label="Generate Data", type="primary")
+    if fileLoc:
+        filePath = save_upload(fileLoc)
+        fileName,  fileextn = os.path.basename(filePath).split(".") 
+        select_sheets = 0
         
-    if btn:
-        if select_columns is not None:
-            with st.spinner("Processing..",show_time=True):
-                
-                tmp_path = get_country_code(df, select_columns, fileextn, select_sheets, getinLSQFormat)
+        if fileextn == "xlsx":
+            with pd.ExcelFile(filePath, engine="openpyxl") as file:
+                sheets = file.sheet_names
 
-                if tmp_path:
-                    if (fileextn == "csv") and getinLSQFormat:
-                        new_tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".xlsx")
-                        new_tmp.close()
-                        new_df = pd.read_csv(tmp_path, sep=",", low_memory=False).to_excel(new_tmp.name, index=False)
-                        tmp_path = new_tmp.name
-                        fileextn = "xlsx"
-
-                    outputFileName = fileName+"."+fileextn
-                    with open(tmp_path, "rb") as f:
-                        
-                        st.download_button("Download Files", f,  file_name=outputFileName)
-
-                    os.unlink(tmp_path) 
-                #st.download_button(label="Download File", data=df, file_name=filePath.name) 
+            if len(sheets) > 0:
+                select_sheets = st.selectbox(label = "Multiple Sheets detected. Select a sheet to process", options=sheets)
+                if select_sheets:
+                    df = pd.read_excel(filePath,nrows=100 , sheet_name=select_sheets)
+            else:
+                df = pd.read_excel(filePath,nrows=100 , sheet_name=sheets[0])
         else:
-            raiseError("Select a column first to continue.")
-elif len(text) > 0:
-    
-    candidates = ["\n", ",", ";", "\t"]
-    delimiter = max(candidates, key=lambda d: text.count(d))
+            df= pd.read_csv(filePath,sep=",", nrows = 100, encoding_errors="replace")
 
-    df = pd.DataFrame(data={"Phone": text.split(delimiter)})
-    df["Phone"] = df["Phone"].map(lambda x: pd.NA if x== "" else x)
-    df["Test"] = df["Phone"].map(lambda x: getNumber(x))
-
-    validPhoneNumbers = df["Test"].count()
-    if  validPhoneNumbers  > 0:
-        df.dropna(subset=["Test"], how="all", inplace=True)
-        st.success(f"{validPhoneNumbers} valid records were entered.")
-
+        select_columns = st.selectbox(label = "Select a column to process", options=df.columns, index=None)
+        
         btn = st.button(label="Generate Data", type="primary")
+            
         if btn:
-            with st.spinner("Processing..",show_time=True):
-                output_df = get_country_code(df, "Phone", "manual", None, getinLSQFormat)
-                #output_df = pd.read_excel(tmp_path)
+            if select_columns is not None:
+                with st.spinner("Processing..",show_time=True):
+                    
+                    tmp_path = get_country_code(df, select_columns, fileextn, select_sheets, getinLSQFormat)
 
-                st.dataframe(output_df.style.set_properties(**{'text-align': 'right'}) , hide_index=True)  
+                    if tmp_path:
+                        if (fileextn == "csv") and getinLSQFormat:
+                        #     new_tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".xlsx")
+                        #     new_tmp.close()
+                        #     new_df = pd.read_csv(tmp_path, sep=",", low_memory=False).to_excel(new_tmp.name, index=False)
+                        #     tmp_path = new_tmp.name
+                            fileextn = "xlsx"
 
-    else:
-        raiseError("Please enter phone number with country code only.")
+                        outputFileName = fileName+"."+fileextn
+                        with open(tmp_path, "rb") as f:
+                            st.download_button("Download Files", f,  file_name=outputFileName)
+
+                        os.unlink(tmp_path) 
+                    #st.download_button(label="Download File", data=df, file_name=filePath.name) 
+            else:
+                raiseError("Select a column first to continue.")
+                
+    elif len(text) > 0:
+        
+        candidates = ["\n", ",", ";", "\t"]
+        delimiter = max(candidates, key=lambda d: text.count(d))
+
+        df = pd.DataFrame(data={"Phone": text.split(delimiter)})
+        df["Phone"] = df["Phone"].map(lambda x: pd.NA if x== "" else x)
+        df["Test"] = df["Phone"].map(lambda x: getNumber(x))
+
+        validPhoneNumbers = df["Test"].count()
+        if  validPhoneNumbers  > 0:
+            df.dropna(subset=["Test"], how="all", inplace=True)
+            st.success(f"{validPhoneNumbers} valid records were entered.")
+
+            btn = st.button(label="Generate Data", type="primary")
+            if btn:
+                with st.spinner("Processing..",show_time=True):
+                    output_df = get_country_code(df, "Phone", "manual", None, getinLSQFormat)
+                    #output_df = pd.read_excel(tmp_path)
+
+                    st.dataframe(output_df.style.set_properties(**{'text-align': 'right'}) , hide_index=True)  
+
+        else:
+            raiseError("Please enter phone number with country code only.")
     
 
     
