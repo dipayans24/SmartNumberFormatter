@@ -53,9 +53,9 @@ def get_country_code(df, select_columns, fileextn, select_sheets = 0, LSQFormat 
 
     if fileextn != "manual":
         if fileextn == "xlsx":
-            df = pd.read_excel(filePath, sheet_name=select_sheets)
+            df = pd.read_excel(filePath, sheet_name=select_sheets, parse_dates=False)
         else:
-            df= pd.read_csv(filePath,sep=",", encoding_errors="ignore", low_memory=False)
+            df= pd.read_csv(filePath,sep=",", encoding_errors="ignore", low_memory=False, parse_dates=False)
 
     
         df["Test"] = df[select_columns].map(lambda x:  getNumber(x) )
@@ -131,9 +131,9 @@ if fileLoc:
             if select_sheets:
                 df = pd.read_excel(filePath,nrows=100 , sheet_name=select_sheets)
         else:
-            df = pd.read_excel(filePath,nrows=100 , sheet_name=sheets[0])
+            df = pd.read_excel(filePath,nrows=100 , sheet_name=sheets[0],parse_dates=False)
     else:
-        df= pd.read_csv(filePath,sep=",", nrows = 100, encoding_errors="replace")
+        df= pd.read_csv(filePath,sep=",", nrows = 100, encoding_errors="replace", parse_dates=False)
 
     select_columns = st.selectbox(label = "Select a column to process", options=df.columns, index=None)
     
