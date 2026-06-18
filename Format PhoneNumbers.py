@@ -118,7 +118,7 @@ if __name__ == "__main__":
     st.markdown("<h3 style='text-align: center;'>OR</h3>", unsafe_allow_html=True)
     fileLoc = st.file_uploader("Upload File", type=["csv", "xlsx"], on_change=reset_text, key=f"uploader_{st.session_state.uploader_key}")
 
-    getinLSQFormat = st.checkbox("LeadSquared Format. Approx. 35 seconds to process 100,000 records.")
+    getinLSQFormat = st.checkbox("LeadSquared Format. (Approx. 35 seconds to process 100,000 records.)")
 
     if fileLoc:
         filePath = save_upload(fileLoc)
