@@ -26,7 +26,7 @@ def national_number(number):
 def getNumber(number):
     
     try:
-        mobile = re.findall(r'\d+', str(number))[0]
+        mobile = re.sub(r'\D', "", str(number))
         if len(mobile)> 7:
             return mobile
 
@@ -131,8 +131,7 @@ if fileLoc:
     else:
         df= pd.read_csv(filePath,sep=",", nrows = 100, encoding_errors="replace")
 
-    eligibleColumns = df.select_dtypes(include=["float", "int"]).columns
-    select_columns = st.selectbox(label = "Select a column to process", options=eligibleColumns)
+    select_columns = st.selectbox(label = "Select a column to process", options=df.columns)
 
     btn = st.button(label="Generate Data", type="primary")
     
