@@ -135,32 +135,33 @@ if fileLoc:
     else:
         df= pd.read_csv(filePath,sep=",", nrows = 100, encoding_errors="replace")
 
-    select_columns = st.selectbox(label = "Select a column to process", options=df.columns)
+    select_columns = st.selectbox(label = "Select a column to process", options=df.columns, index=None)
     
-
     btn = st.button(label="Generate Data", type="primary")
-    
+        
     if btn:
-        with st.spinner("Processing..",show_time=True):
-            
-            tmp_path = get_country_code(df, select_columns, fileextn, select_sheets, getinLSQFormat)
+        if select_columns is not None:
+            with st.spinner("Processing..",show_time=True):
+                
+                tmp_path = get_country_code(df, select_columns, fileextn, select_sheets, getinLSQFormat)
 
-            if tmp_path:
-                if (fileextn == "csv") and getinLSQFormat:
-                    new_tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".xlsx")
-                    new_tmp.close()
-                    new_df = pd.read_csv(tmp_path, sep=",", low_memory=False).to_excel(new_tmp.name, index=False)
-                    tmp_path = new_tmp.name
-                    fileextn = "xlsx"
+                if tmp_path:
+                    if (fileextn == "csv") and getinLSQFormat:
+                        new_tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".xlsx")
+                        new_tmp.close()
+                        new_df = pd.read_csv(tmp_path, sep=",", low_memory=False).to_excel(new_tmp.name, index=False)
+                        tmp_path = new_tmp.name
+                        fileextn = "xlsx"
 
-                outputFileName = fileName+"."+fileextn
-                with open(tmp_path, "rb") as f:
-                    
-                    st.download_button("Download Files", f,  file_name=outputFileName)
+                    outputFileName = fileName+"."+fileextn
+                    with open(tmp_path, "rb") as f:
+                        
+                        st.download_button("Download Files", f,  file_name=outputFileName)
 
-                os.unlink(tmp_path) 
-            #st.download_button(label="Download File", data=df, file_name=filePath.name) 
-
+                    os.unlink(tmp_path) 
+                #st.download_button(label="Download File", data=df, file_name=filePath.name) 
+        else:
+            raiseError("Select a column first to continue.")
 elif len(text) > 0:
     
     candidates = ["\n", ",", ";", "\t"]
