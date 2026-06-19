@@ -156,7 +156,7 @@ if __name__ == "__main__":
                         #     tmp_path = new_tmp.name
                             fileextn = "xlsx"
 
-                        outputFileName = fileName+"."+fileextn
+                        outputFileName = f"{fileName}_frmt.{fileextn}"
                         with open(tmp_path, "rb") as f:
                             st.download_button("Download Files", f,  file_name=outputFileName)
 
