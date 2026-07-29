@@ -129,7 +129,7 @@ if __name__ == "__main__":
             with pd.ExcelFile(filePath, engine="openpyxl") as file:
                 sheets = file.sheet_names
 
-            if len(sheets) > 0:
+            if len(sheets) > 1:
                 select_sheets = st.selectbox(label = "Multiple Sheets detected. Select a sheet to process", options=sheets)
                 if select_sheets:
                     df = pd.read_excel(filePath,nrows=100 , sheet_name=select_sheets)
