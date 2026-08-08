@@ -6,7 +6,7 @@ import tempfile
 import numpy as np
 import pandas as pd, phonenumbers, re
 import streamlit as st
-
+from stqdm import stqdm
 
 @st.dialog("Error!!")
 def raiseError(text):
@@ -41,7 +41,17 @@ def getNewName(NewColName, df):
         newcol = newcol+1
     
     return NewColName
-      
+
+def extract_phone_parts(number):
+    try:
+        mobile = re.sub(r'\D', "", str(number))
+        if not (7 < len(mobile) < 17):
+            return pd.Series([pd.NA, pd.NA, pd.NA])
+        parsed = phonenumbers.parse("+" + mobile)
+        return pd.Series([mobile, parsed.country_code, parsed.national_number])
+    except Exception:
+        return pd.Series([pd.NA, pd.NA, pd.NA])
+        
 def save_upload(uploaded_file):
     tmp_dir = tempfile.mkdtemp()
     tmp_path = os.path.join(tmp_dir, uploaded_file.name)
@@ -58,14 +68,16 @@ def get_country_code(df, select_columns, fileextn, select_sheets = 0, LSQFormat 
             df= pd.read_csv(filePath,sep=",", encoding_errors="ignore", low_memory=False, parse_dates=False)
 
     
-        df["Test"] = df[select_columns].map(lambda x:  getNumber(x) )
+        #df["Test"] = df[select_columns].map(lambda x:  getNumber(x) )
 
     country_code_column = getNewName("Country_Code", df)
     phone_number_column = getNewName("Phone_Number", df)
 
+    df[["Test", country_code_column, phone_number_column]] = df[select_columns].progress_apply(extract_phone_parts)
+    
     ColLocation = df.columns.get_loc(select_columns)
-    df.insert(loc=ColLocation, column=country_code_column, value=df["Test"].map(lambda x: country_code(str(x))), allow_duplicates=True )
-    df.insert(loc=ColLocation+1, column=phone_number_column, value=df["Test"].map(lambda x: national_number(str(x))), allow_duplicates=True )
+    #df.insert(loc=ColLocation, column=country_code_column, value=df["Test"].map(lambda x: country_code(str(x))), allow_duplicates=True )
+    #df.insert(loc=ColLocation+1, column=phone_number_column, value=df["Test"].map(lambda x: national_number(str(x))), allow_duplicates=True )
     
     totalLength =  df[phone_number_column].notna().sum() 
     
