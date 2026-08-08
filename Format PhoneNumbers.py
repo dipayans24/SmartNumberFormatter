@@ -42,15 +42,18 @@ def getNewName(NewColName, df):
     
     return NewColName
 
-def extract_phone_parts(number):
+def extract_phone_parts(number, lsq_format=False):
     try:
         mobile = re.sub(r'\D', "", str(number))
         if not (7 < len(mobile) < 17):
-            return pd.Series([pd.NA, pd.NA, pd.NA])
+            return pd.Series([pd.NA, pd.NA, pd.NA, pd.NA])
         parsed = phonenumbers.parse("+" + mobile)
-        return pd.Series([mobile, parsed.country_code, parsed.national_number])
+        country_code = parsed.country_code
+        national_number = parsed.national_number
+        lsq_phone = f"+{country_code}-{national_number}" if lsq_format else pd.NA
+        return pd.Series([mobile, country_code, national_number, lsq_phone])
     except Exception:
-        return pd.Series([pd.NA, pd.NA, pd.NA])
+        return pd.Series([pd.NA, pd.NA, pd.NA, pd.NA])
         
 def save_upload(uploaded_file):
     tmp_dir = tempfile.mkdtemp()
@@ -73,7 +76,13 @@ def get_country_code(df, select_columns, fileextn, select_sheets = 0, LSQFormat 
     country_code_column = getNewName("Country_Code", df)
     phone_number_column = getNewName("Phone_Number", df)
     stqdm.pandas()
-    df[["Test", country_code_column, phone_number_column]] = df[select_columns].progress_apply(extract_phone_parts)
+
+    new_cols = ["Test", country_code_column, phone_number_column]
+    result_cols = new_cols + ["_lsq_temp"]
+
+    df[result_cols] = df[select_columns].apply(lambda x: extract_phone_parts(x, LSQFormat))
+
+    df[["Test", country_code_column, phone_number_column]] = df[select_columns].progress_apply(lambda x: extract_phone_parts(x, LSQFormat))
     
     ColLocation = df.columns.get_loc(select_columns)
     #df.insert(loc=ColLocation, column=country_code_column, value=df["Test"].map(lambda x: country_code(str(x))), allow_duplicates=True )
@@ -82,16 +91,21 @@ def get_country_code(df, select_columns, fileextn, select_sheets = 0, LSQFormat 
     totalLength =  df[phone_number_column].notna().sum() 
     
     if totalLength>0:
-        if LSQFormat:  
+        if LSQFormat:
             LSQ_Phone = getNewName("Phone_LSQ", df)
-            df.insert(loc=ColLocation+2, column=LSQ_Phone,  
-                    value=np.where(df[phone_number_column].notna(), 
-                                                "+" + df[country_code_column].astype(str) + "-" + df[phone_number_column].astype(str),
-                                                pd.NA), allow_duplicates=True )
+            df[LSQ_Phone] = df["_lsq_temp"]
+            new_cols.append(LSQ_Phone)
+            df = df.drop(columns="_lsq_temp")
             
         df.drop(columns=["Test"], inplace=True)
 
         df.rename(columns={i: " " for i in df.columns if i.find("Unnamed") != -1}, errors="ignore", inplace=True)
+        cols = df.columns.tolist()
+        for col in new_cols:
+            cols.insert(ColLocation, cols.pop(cols.index(col)))
+            ColLocation += 1
+        df = df[cols]
+        
         if fileextn != "manual":
             tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".xlsx" if (fileextn in ["xlsx", "manual"]) or LSQFormat else ".csv")
             tmp.close()
