@@ -98,15 +98,16 @@ def get_country_code(df, select_columns, fileextn, select_sheets = 0, LSQFormat 
             
         df = df.drop(columns="_lsq_temp")
             
-        df.drop(columns=["Test"], inplace=True)
-
-        df.rename(columns={i: " " for i in df.columns if i.find("Unnamed") != -1}, errors="ignore", inplace=True)
+        
         cols = df.columns.tolist()
         for col in new_cols:
             cols.insert(ColLocation, cols.pop(cols.index(col)))
             ColLocation += 1
         df = df[cols]
+
+        df.drop(columns=["Test"], inplace=True)
         
+        df.rename(columns={i: " " for i in df.columns if i.find("Unnamed") != -1}, errors="ignore", inplace=True)
         if fileextn != "manual":
             tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".xlsx" if (fileextn in ["xlsx", "manual"]) or LSQFormat else ".csv")
             tmp.close()
