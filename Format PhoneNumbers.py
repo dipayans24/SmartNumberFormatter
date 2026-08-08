@@ -72,7 +72,7 @@ def get_country_code(df, select_columns, fileextn, select_sheets = 0, LSQFormat 
 
     country_code_column = getNewName("Country_Code", df)
     phone_number_column = getNewName("Phone_Number", df)
-
+    stqdm.pandas()
     df[["Test", country_code_column, phone_number_column]] = df[select_columns].progress_apply(extract_phone_parts)
     
     ColLocation = df.columns.get_loc(select_columns)
