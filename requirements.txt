@@ -4,3 +4,4 @@ numpy
 phonenumbers
 openpyxl
 xlsxwriter
+stqdm
