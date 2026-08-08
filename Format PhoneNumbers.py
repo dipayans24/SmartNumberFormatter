@@ -80,9 +80,9 @@ def get_country_code(df, select_columns, fileextn, select_sheets = 0, LSQFormat 
     new_cols = ["Test", country_code_column, phone_number_column]
     result_cols = new_cols + ["_lsq_temp"]
 
-    df[result_cols] = df[select_columns].apply(lambda x: extract_phone_parts(x, LSQFormat))
+    df[result_cols] = df[select_columns].progress_apply(lambda x: extract_phone_parts(x, LSQFormat))
 
-    df[["Test", country_code_column, phone_number_column]] = df[select_columns].progress_apply(lambda x: extract_phone_parts(x, LSQFormat))
+    #df[["Test", country_code_column, phone_number_column]] = df[select_columns].progress_apply(lambda x: extract_phone_parts(x, LSQFormat))
     
     ColLocation = df.columns.get_loc(select_columns)
     #df.insert(loc=ColLocation, column=country_code_column, value=df["Test"].map(lambda x: country_code(str(x))), allow_duplicates=True )
@@ -95,7 +95,8 @@ def get_country_code(df, select_columns, fileextn, select_sheets = 0, LSQFormat 
             LSQ_Phone = getNewName("Phone_LSQ", df)
             df[LSQ_Phone] = df["_lsq_temp"]
             new_cols.append(LSQ_Phone)
-            df = df.drop(columns="_lsq_temp")
+            
+        df = df.drop(columns="_lsq_temp")
             
         df.drop(columns=["Test"], inplace=True)
 
